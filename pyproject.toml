@@ -1,0 +1,16 @@
+[project]
+name = "lexigon"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Jonas Köhler", email = "jonas@cusp.ai" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "nicegui>=2.20.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
