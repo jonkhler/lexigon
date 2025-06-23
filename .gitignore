@@ -11,4 +11,4 @@ wheels/
 
 # Jupyter Notebook checkpoints and notebooks
 .ipynb_checkpoints/
-*.ipynb
+*.ipynb.DS_Store
