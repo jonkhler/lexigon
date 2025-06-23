@@ -14,9 +14,10 @@ class Renderable(Protocol):
 
 
 class ProgressBar:
-    __slots__ = ("bar", "label")
+    __slots__ = ("bar", "label", "previous_points")
 
     def __init__(self, progress_width: int = 400):
+        self.previous_points = 0
         with ui.element("div").classes("mt-2"):
             with ui.element("div").style(
                 f"width: {progress_width}px; position: relative;"
@@ -29,7 +30,35 @@ class ProgressBar:
                     "absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-white font-bold text-sm pointer-events-none"
                 )
 
+    def update_progress(self, current_points: int, max_points: int):
+        ratio = current_points / max_points
+        self.bar.value = ratio
+
+        # Decide colors
+        if current_points > self.previous_points:
+            background = "#bbf7d0"  # green-200
+            fill_color = "green-600"
+        elif current_points < self.previous_points:
+            background = "#fecaca"  # red-200
+            fill_color = "red-600"
+        else:
+            background = "#dbeafe"  # blue-200
+            fill_color = "blue-600"
+
+        # Apply track background and fill color
+        self.bar.style(
+            f"background-color: {background}; transition: background-color 1.0s ease;"
+        )
+        self.bar.props(f"color={fill_color}")
+
+        self.previous_points = current_points
+
     def render(self, state: GameState):
+        self.update_progress(
+            state.current_points - state.total_penalty, state.max_points
+        )
+        if state.completed:
+            self.bar.style("background-color: green;")
         self.bar.value = (state.current_points - state.total_penalty) / state.max_points
         self.label.text = (
             f"{state.current_points - state.total_penalty} / {state.max_points}"
@@ -158,21 +187,21 @@ class FoundElementList:
         with self.container:
             with ui.element("div") as entry:
                 entry.classes(
-                    "relative border border-gray-300 rounded px-3 py-1 bg-white shadow text-black"
+                    "relative border rounded px-2 py-1 shadow text-black font-bold bg-white"
                 )
                 ui.label(word.upper()).classes("text-base font-semibold")
                 ui.label(f"{points}").classes(
-                    "absolute -top-2 -right-2 text-xs px-2 py-0.5 rounded-full bg-green-500 text-white shadow"
+                    "absolute -top-2 -right-2 text-xs px-2 py-0.5 bg-green-500 text-white rounded-full"
                 )
                 self.entries.append(entry)
 
     def add_penalty(self, penalty: int):
         with self.container:
-            with ui.element("div") as entry:
-                entry.classes(
-                    "relative border border-gray-300 rounded px-2 py-0.5 text-s rounded-full bg-red shadow text-white shadow"
-                )
-                ui.label(f"-{penalty}").classes("font-semibold")
+            with ui.element("div").classes(
+                "relative border border-red-300 bg-red-100 text-red-800 rounded px-3 py-1 text-sm font-semibold flex items-center gap-1 shadow"
+            ) as entry:
+                ui.icon("dangerous").classes("text-red-500 text-base")
+                ui.label(f"-{penalty}")
                 self.entries.append(entry)
 
     def render(self, game: GameState):
@@ -236,7 +265,7 @@ class HintLabel:
                 )
                 ui.label(letter.upper()).classes("text-base font-semibold")
                 ui.label(f"-{revealed}").classes(
-                    "absolute -top-2 -right-2 text-xs px-2 py-0.5 rounded-full bg-red-500 text-white shadow"
+                    "absolute -top-2 -right-4 text-xs px-2 py-0.5 rounded-full bg-red-500 text-white shadow"
                 )
                 self.entries.append(entry)
 
@@ -297,10 +326,7 @@ class GameManager:
         with ui.element("div").classes(
             "flex flex-col items-center justify-start gap-y-2 overflow-y-auto"
         ):
-            # ui.image("static/logo-short.png").classes("w-50 mt-4mx-auto")
-            ui.label("Lexigon").classes(
-                "text-3xl font-bold text-center mt-4 mb-2"
-            ).style("color: #4A90E2;")
+            ui.image("static/logo-short.png").classes("w-20 mt-4mx-auto")
             self.components = (
                 FoundElementList(),
                 ProgressBar(),
