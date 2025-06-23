@@ -17,6 +17,9 @@ if __name__ in {"__main__", "__mp_main__"}:
     parser.add_argument(
         "-P", "--port", type=int, default=8080, help="Port to run the game server on"
     )
+    parser.add_argument(
+        "-H", "--host", type=str, default="0.0.0.0", help="Host for server"
+    )
     args = parser.parse_args()
     wordlist = Wordlist.make(
         words=set(
@@ -25,4 +28,4 @@ if __name__ in {"__main__", "__mp_main__"}:
         )
     )
     manager = GameManager(GameState.create_from_wordlist(wordlist))
-    ui.run(title="Lexigon", port=args.port, reload=True, show=False)
+    ui.run(host=args.host, title="Lexigon", port=args.port, reload=True, show=False)
