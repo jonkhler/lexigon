@@ -29,10 +29,12 @@ class ProgressBar:
                     "absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-white font-bold text-sm pointer-events-none"
                 )
 
-    def render(self, game: GameState):
-        self.bar.value = game.current_points / game.MAX_POINTS
-        self.label.text = f"{game.current_points} / {game.MAX_POINTS}"
-        if game.completed:
+    def render(self, state: GameState):
+        self.bar.value = (state.current_points - state.total_penalty) / state.max_points
+        self.label.text = (
+            f"{state.current_points - state.total_penalty} / {state.max_points}"
+        )
+        if state.completed:
             self.bar.style("background-color: green;")
 
 
@@ -154,14 +156,25 @@ class FoundElementList:
                 )
                 ui.label(word.upper()).classes("text-base font-semibold")
                 ui.label(f"{points}").classes(
-                    "absolute -top-2 -right-2 text-xs px-2 py-0.5 rounded-full bg-red-500 text-white shadow"
+                    "absolute -top-2 -right-2 text-xs px-2 py-0.5 rounded-full bg-green-500 text-white shadow"
                 )
+                self.entries.append(entry)
+
+    def add_penalty(self, penalty: int):
+        with self.container:
+            with ui.element("div") as entry:
+                entry.classes(
+                    "relative border border-gray-300 rounded px-2 py-0.5 text-s rounded-full bg-red shadow text-white shadow"
+                )
+                ui.label(f"-{penalty}").classes("font-semibold")
                 self.entries.append(entry)
 
     def render(self, game: GameState):
         self.clear()
         for move in game.moves:
             self.add(move.word, move.points)
+        if game.total_penalty > 0:
+            self.add_penalty(game.total_penalty)
 
     def clear(self):
         self.container.clear()
@@ -184,6 +197,55 @@ class ResetButton:
         pass
 
 
+class HintButton:
+    __slots__ = "button"
+
+    def __init__(self) -> None:
+        with ui.element("div").classes("mt-4"):
+            self.button = ui.button("Get Hint").classes(
+                "text-xs text-gray-500 border border-gray-300 bg-gray-50 opacity-50 hover:opacity-70 px-2 py-1 rounded"
+            )
+
+    def bind(self, handler):
+        self.button.on("click", handler)
+        return self
+
+    def render(self, game: GameState):
+        pass
+
+
+class HintLabel:
+    __slots__ = ("container", "entries")
+
+    def __init__(self):
+        with ui.element("div").classes("flex flex-wrap gap-2 justify-center mt-4"):
+            self.container = ui.row().classes("gap-3 flex-wrap justify-center")
+            self.entries: list[ui.element] = []
+
+    def add(self, letter: str, revealed: int = 0):
+        with self.container:
+            with ui.element("div") as entry:
+                entry.classes(
+                    "relative border border-gray-300 rounded px-2 py-1 bg-white shadow text-black"
+                )
+                ui.label(letter.upper()).classes("text-base font-semibold")
+                ui.label(f"-{revealed}").classes(
+                    "absolute -top-2 -right-2 text-xs px-2 py-0.5 rounded-full bg-red-500 text-white shadow"
+                )
+                self.entries.append(entry)
+
+    def clear(self):
+        for entry in self.entries:
+            entry.delete()
+        self.entries.clear()
+
+    def render(self, game: GameState):
+        self.clear()
+        self.container.clear()
+        for i, letter in enumerate(game.hint):
+            self.add(letter, revealed=i + 1)
+
+
 class GameManager:
     __slots__ = ("components", "state")
 
@@ -196,25 +258,48 @@ class GameManager:
                 FoundElementList(),
                 ProgressBar(),
                 LexigonView(state.lexigon).bind(self.update_candidate),
-                ResetButton().bind(self.reset),
                 SubmitButton().bind(self.submit_candidate),
                 CandidateLabel(),
+                HintButton().bind(self.request_hint),
+                HintLabel(),
+                ResetButton().bind(self.reset),
             )
+            self.update_ui()
 
     def reset(self):
         self.state = self.state.reset()
         self.update_ui()
         ui.notify("Game reset successfully!", color="blue")
 
+    def win(self):
+        num_moves = len(self.state.moves)
+        self.state = self.state.reset()
+        self.update_ui()
+        ui.notify(
+            f"Congratulations: you won within {num_moves} moves!",
+            color="blue",
+        )
+
+    def request_hint(self):
+        try:
+            self.state = self.state.request_hint()
+            self.update_ui()
+        except ValueError as e:
+            self.update_ui()
+            ui.notify(f"Error: {str(e)}", color="red")
+
     def submit_candidate(self):
         try:
             candidate = self.state.candidate.strip()
-            self.state = self.state.test_candidate()
-            self.update_ui()
-            ui.notify(
-                f"Candidate '{candidate}' submitted successfully!",
-                color="green",
-            )
+            self.state = self.state.add_move()
+            if self.state.completed:
+                self.win()
+            else:
+                self.update_ui()
+                ui.notify(
+                    f"Candidate '{candidate}' submitted successfully!",
+                    color="green",
+                )
         except ValueError as e:
             self.state = replace(self.state, candidate="")
             self.update_ui()
