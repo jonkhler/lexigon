@@ -8,6 +8,29 @@ from nicegui import app, events, ui
 
 from lexigon.game import GameState, Lexigon, Wordlist
 
+LEXIGON_HELP_TEXT = """
+### 🧠 How to Play Lexigon
+
+- Form valid words using the given letters  
+- Each word must include the **center letter**  
+- Words must be at least **4 letters long**  
+- Only words from the selected wordlist are allowed (choose in dropdown)  
+- Longer words earn more points  
+- 🧩 **Isograms** (words using *all* letters once) give **10 points**  
+- You win when you reach the **maximum score**
+
+---
+
+#### 💡 Hints:
+Reveal letters for a cost:
+
+- 1 point → 1st letter  
+- 2 points → 2nd letter  
+- 3 points → 3rd letter  
+...and so on
+
+"""
+
 
 class Renderable(Protocol):
     def render(self, game: GameState) -> None: ...
@@ -303,7 +326,7 @@ class WordlistSelector:
 
 
 class GameManager:
-    __slots__ = ("components", "state", "wordlists")
+    __slots__ = ("components", "state", "wordlists", "help_dialog")
 
     def __init__(self, wordlists: dict[str, Wordlist]):
         self.wordlists = wordlists
@@ -323,10 +346,21 @@ class GameManager:
         }
         </style>
         """)
+        self.help_dialog = ui.dialog().props("max-width='600px'")
+        with self.help_dialog:
+            with ui.card().classes("p-4 rounded-lg bg-white shadow-md"):
+                ui.markdown(LEXIGON_HELP_TEXT).classes("text-sm leading-relaxed")
+                ui.button("❌ Close").on("click", self.help_dialog.close).classes(
+                    "mt-4"
+                )
         with ui.element("div").classes(
             "flex flex-col items-center justify-start gap-y-2 overflow-y-auto"
         ):
             ui.image("static/logo-short.png").classes("w-20 mt-4mx-auto")
+            ui.icon("help").classes(
+                "text-blue-300 hover:opacity-70 rounded text-2xl"
+            ).on("click", self.help_dialog.open)
+
             self.components = (
                 FoundElementList(),
                 ProgressBar(),
