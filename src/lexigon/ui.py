@@ -4,9 +4,9 @@ import math
 from dataclasses import replace
 from typing import ClassVar, Protocol
 
-from nicegui import ui
+from nicegui import events, ui
 
-from lexigon.game import GameState, Lexigon
+from lexigon.game import GameState, Lexigon, Wordlist
 
 
 class Renderable(Protocol):
@@ -17,7 +17,7 @@ class ProgressBar:
     __slots__ = ("bar", "label")
 
     def __init__(self, progress_width: int = 400):
-        with ui.element("div").classes("mt-4"):
+        with ui.element("div").classes("mt-2"):
             with ui.element("div").style(
                 f"width: {progress_width}px; position: relative;"
             ):
@@ -42,7 +42,7 @@ class CandidateLabel:
     __slots__ = ("container", "entries")
 
     def __init__(self):
-        with ui.element("div").classes("flex flex-wrap gap-2 justify-center mt-4"):
+        with ui.element("div").classes("flex flex-wrap gap-2 justify-center mt-2"):
             self.container = ui.row().classes("gap-3 flex-wrap justify-center")
             self.entries: list[ui.element] = []
 
@@ -71,8 +71,10 @@ class SubmitButton:
     __slots__ = ("button",)
 
     def __init__(self):
-        with ui.element("div").classes("mt-4"):
-            self.button = ui.button("Submit").classes("bg-blue-500 text-white rounded")
+        with ui.element("div").classes("mt-1"):
+            self.button = ui.button("Submit").classes(
+                "bg-blue-500 text-white px-2 py-1 rounded"
+            )
 
     def bind(self, handler):
         self.button.on("click", handler)
@@ -83,7 +85,7 @@ class SubmitButton:
 
 
 class LexigonView:
-    RADIUS: ClassVar[int] = 90
+    RADIUS: ClassVar[int] = 70
     BUTTON_SIZE: ClassVar[int] = 50
     __slots__ = ("_root", "_handler", "center_button", "ring_buttons", "container_size")
 
@@ -94,16 +96,18 @@ class LexigonView:
         self._reset(lexigon)
 
     def _reset(self, lexigon: Lexigon):
-        with self._root.classes("mt-4 relative").style(
+        with self._root.classes("mt-1 relative").style(
             f"width: {self.container_size}px; height: {self.container_size}px"
         ):
             # Center button
-            self.center_button = ui.button(lexigon.mandatory_letter).style(
+            self.center_button = ui.button(lexigon.mandatory_letter, color="blue-8")
+            self.center_button.style(
                 f"position: absolute; "
                 f"left: {self.container_size / 2 - LexigonView.BUTTON_SIZE / 2}px; "
                 f"top: {self.container_size / 2 - LexigonView.BUTTON_SIZE / 2}px; "
                 f"width: {LexigonView.BUTTON_SIZE}px; height: {LexigonView.BUTTON_SIZE}px"
             )
+            self.center_button.classes("text-white rounded-full shadow")
 
             # Ring buttons
             self.ring_buttons = []
@@ -112,12 +116,14 @@ class LexigonView:
                 angle = 2 * math.pi * i / n
                 x = math.cos(angle) * LexigonView.RADIUS
                 y = math.sin(angle) * LexigonView.RADIUS
-                button = ui.button(letter).style(
+                button = ui.button(letter)
+                button.style(
                     f"position: absolute; "
                     f"left: {self.container_size / 2 + x - LexigonView.BUTTON_SIZE / 2}px; "
                     f"top: {self.container_size / 2 + y - LexigonView.BUTTON_SIZE / 2}px; "
                     f"width: {LexigonView.BUTTON_SIZE}px; height: {LexigonView.BUTTON_SIZE}px"
                 )
+                button.classes("text-white rounded-full shadow")
                 self.ring_buttons.append(button)
 
         if self._handler is not None:
@@ -144,7 +150,7 @@ class FoundElementList:
     __slots__ = ("container", "entries")
 
     def __init__(self):
-        with ui.element("div").classes("flex flex-wrap mt-4 gap-2 justify-center mt-4"):
+        with ui.element("div").classes("flex flex-wrap mt-2 gap-2 justify-center"):
             self.container = ui.row().classes("gap-3 flex-wrap justify-center")
             self.entries: list[ui.element] = []
 
@@ -184,7 +190,7 @@ class ResetButton:
     __slots__ = ("button",)
 
     def __init__(self):
-        with ui.element("div").classes("mt-4"):
+        with ui.element("div").classes("mt-2"):
             self.button = ui.button("Reset").classes(
                 "text-xs text-gray-500 border border-gray-300 bg-gray-50 opacity-50 hover:opacity-70 px-2 py-1 rounded"
             )
@@ -201,7 +207,7 @@ class HintButton:
     __slots__ = "button"
 
     def __init__(self) -> None:
-        with ui.element("div").classes("mt-4"):
+        with ui.element("div").classes("mt-2"):
             self.button = ui.button("Get Hint").classes(
                 "text-xs text-gray-500 border border-gray-300 bg-gray-50 opacity-50 hover:opacity-70 px-2 py-1 rounded"
             )
@@ -218,7 +224,7 @@ class HintLabel:
     __slots__ = ("container", "entries")
 
     def __init__(self):
-        with ui.element("div").classes("flex flex-wrap gap-2 justify-center mt-4"):
+        with ui.element("div").classes("flex flex-wrap gap-2 justify-center mt-2"):
             self.container = ui.row().classes("gap-3 flex-wrap justify-center")
             self.entries: list[ui.element] = []
 
@@ -246,23 +252,61 @@ class HintLabel:
             self.add(letter, revealed=i + 1)
 
 
-class GameManager:
-    __slots__ = ("components", "state")
+class WordlistSelector:
+    __slots__ = ("selector", "options")
 
-    def __init__(self, state: GameState):
-        self.state = state
+    def __init__(self, wordlists: list[str], default: str):
+        with ui.element("div").classes("mt-2"):
+            self.selector = ui.select(
+                wordlists, label="Select Wordlist", value=default
+            ).classes("w-64")
+            self.options = wordlists
+
+    def bind(self, handler):
+        self.selector.on("update:model-value", handler)
+        return self
+
+    def render(self, game: GameState):
+        pass
+
+
+class GameManager:
+    __slots__ = ("components", "state", "wordlists")
+
+    def __init__(self, wordlists: dict[str, Wordlist]):
+        self.wordlists = wordlists
+        initial_wordlist_key = next(iter(wordlists))
+        initial_wordlist = wordlists[initial_wordlist_key]
+        self.state = GameState.create_from_wordlist(initial_wordlist)
+        ui.add_head_html("""
+        <style>
+        .nicegui-content {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh; 
+        }
+        </style>
+        """)
         with ui.element("div").classes(
-            "w-screen h-screen flex flex-col justify-center items-center"
+            "flex flex-col items-center justify-start gap-y-2 overflow-y-auto"
         ):
+            ui.image("static/logo-short.png").classes("w-50 mt-4mx-auto")
             self.components = (
                 FoundElementList(),
                 ProgressBar(),
-                LexigonView(state.lexigon).bind(self.update_candidate),
+                LexigonView(self.state.lexigon).bind(self.update_candidate),
                 SubmitButton().bind(self.submit_candidate),
                 CandidateLabel(),
                 HintButton().bind(self.request_hint),
                 HintLabel(),
                 ResetButton().bind(self.reset),
+                WordlistSelector(
+                    list(self.wordlists.keys()), initial_wordlist_key
+                ).bind(self.select_wordlist),
             )
             self.update_ui()
 
@@ -279,6 +323,16 @@ class GameManager:
             f"Congratulations: you won within {num_moves} moves!",
             color="blue",
         )
+
+    def select_wordlist(self, event: events.GenericEventArguments):
+        wordlist_key = str(event.args["label"])
+        if wordlist_key not in self.wordlists:
+            ui.notify(f"Wordlist '{wordlist_key}' not found.", color="red")
+            return
+        wordlist = self.wordlists[wordlist_key]
+        self.state = GameState.create_from_wordlist(wordlist)
+        self.update_ui()
+        ui.notify(f"Switched to wordlist: {wordlist_key}", color="green")
 
     def request_hint(self):
         try:
