@@ -297,7 +297,10 @@ class GameManager:
         with ui.element("div").classes(
             "flex flex-col items-center justify-start gap-y-2 overflow-y-auto"
         ):
-            ui.image("static/logo-short.png").classes("w-50 mt-4mx-auto")
+            # ui.image("static/logo-short.png").classes("w-50 mt-4mx-auto")
+            ui.label("Lexigon").classes(
+                "text-3xl font-bold text-center mt-4 mb-2"
+            ).style("color: #4A90E2;")
             self.components = (
                 FoundElementList(),
                 ProgressBar(),
