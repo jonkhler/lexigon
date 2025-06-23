@@ -264,8 +264,11 @@ class WordlistSelector:
 
     def bind(self, handler):
         def _handler(event: events.ValueChangeEventArguments):
+            self.selector.on_value_change(lambda _: None)  # Unbind previous handler
             handler(event)
             self.selector.set_value(str(event.value))
+            # Rebind the handler
+            self.selector.on_value_change(_handler)
             # self.selector.value = str(event.value)
 
         self.selector.on_value_change(_handler)
