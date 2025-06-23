@@ -263,7 +263,11 @@ class WordlistSelector:
             self.options = wordlists
 
     def bind(self, handler):
-        self.selector.on("update:model-value", handler)
+        def _handler(event: events.ValueChangeEventArguments):
+            handler(event)
+            self.selector.value = str(event.value)
+
+        self.selector.on_value_change(_handler)
         return self
 
     def render(self, game: GameState):
@@ -324,8 +328,8 @@ class GameManager:
             color="blue",
         )
 
-    def select_wordlist(self, event: events.GenericEventArguments):
-        wordlist_key = str(event.args["label"])
+    def select_wordlist(self, event: events.ValueChangeEventArguments):
+        wordlist_key = str(event.value)
         if wordlist_key not in self.wordlists:
             ui.notify(f"Wordlist '{wordlist_key}' not found.", color="red")
             return
