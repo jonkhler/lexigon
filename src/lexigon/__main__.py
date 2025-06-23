@@ -3,7 +3,7 @@ from pathlib import Path
 
 from nicegui import ui
 
-from lexigon.game import GameState, Wordlist
+from lexigon.game import Wordlist
 from lexigon.ui import GameManager
 
 
@@ -34,12 +34,6 @@ if __name__ in {"__main__", "__mp_main__"}:
         "-H", "--host", type=str, default="0.0.0.0", help="Host for server"
     )
     args = parser.parse_args()
-    # wordlist = Wordlist.make(
-    #     words=set(
-    #         line.strip().lower()
-    #         for line in open(args.path, encoding="utf-8").readlines()
-    #     )
-    # )
     wordlists = load_wordlists(args.path)
     manager = GameManager(wordlists)
     ui.run(host=args.host, title="Lexigon", port=args.port, reload=True, show=False)

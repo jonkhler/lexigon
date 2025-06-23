@@ -182,7 +182,7 @@ class GameState:
     max_points: int
     hint: Hint
     penalties: tuple[int, ...] = ()
-    MAX_POINTS: ClassVar[int] = 10
+    MAX_POINTS: ClassVar[int] = 50
 
     @staticmethod
     def create_from_wordlist(wordlist: Wordlist):

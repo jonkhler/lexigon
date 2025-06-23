@@ -4,7 +4,7 @@ import math
 from dataclasses import replace
 from typing import ClassVar, Protocol
 
-from nicegui import events, ui
+from nicegui import app, events, ui
 
 from lexigon.game import GameState, Lexigon, Wordlist
 
@@ -253,28 +253,24 @@ class HintLabel:
 
 
 class WordlistSelector:
-    __slots__ = ("selector", "options", "selected")
+    __slots__ = ("selector", "options")
 
     def __init__(self, wordlists: list[str], default: str):
-        self.selected = default
+        app.storage.general["selected"] = default
         with ui.element("div").classes("mt-2"):
             self.selector = (
                 ui.select(wordlists, label="Select Wordlist", value=default)
                 .classes("w-64")
-                .bind_value(self, "selected")
+                .bind_value(app.storage.general, "selected")
             )
             self.options = wordlists
 
     def bind(self, handler):
-        def _handler(event: events.GenericEventArguments):
-            self.selected = str(event.args["value"])
-            handler(event)
-
-        self.selector.on("update:model-value", _handler)
+        self.selector.on("update:model-value", handler)
         return self
 
     def render(self, game: GameState):
-        pass
+        self.selector.set_value(app.storage.general["selected"])
 
 
 class GameManager:
