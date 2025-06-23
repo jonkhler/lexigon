@@ -266,7 +266,11 @@ class WordlistSelector:
             self.options = wordlists
 
     def bind(self, handler):
-        self.selector.on("update:model-value", handler)
+        def _handler(event: events.GenericEventArguments):
+            self.selected = str(event.args["value"])
+            handler(event)
+
+        self.selector.on("update:model-value", _handler)
         return self
 
     def render(self, game: GameState):
