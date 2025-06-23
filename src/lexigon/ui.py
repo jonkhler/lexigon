@@ -253,25 +253,20 @@ class HintLabel:
 
 
 class WordlistSelector:
-    __slots__ = ("selector", "options")
+    __slots__ = ("selector", "options", "selected")
 
     def __init__(self, wordlists: list[str], default: str):
+        self.selected = default
         with ui.element("div").classes("mt-2"):
-            self.selector = ui.select(
-                wordlists, label="Select Wordlist", value=default
-            ).classes("w-64")
+            self.selector = (
+                ui.select(wordlists, label="Select Wordlist", value=default)
+                .classes("w-64")
+                .bind_value(self, "selected")
+            )
             self.options = wordlists
 
     def bind(self, handler):
-        def _handler(event: events.ValueChangeEventArguments):
-            self.selector.on_value_change(lambda _: None)  # Unbind previous handler
-            handler(event)
-            self.selector.set_value(str(event.value))
-            # Rebind the handler
-            self.selector.on_value_change(_handler)
-            # self.selector.value = str(event.value)
-
-        self.selector.on_value_change(_handler)
+        self.selector.on("update:model-value", handler)
         return self
 
     def render(self, game: GameState):
@@ -332,8 +327,8 @@ class GameManager:
             color="blue",
         )
 
-    def select_wordlist(self, event: events.ValueChangeEventArguments):
-        wordlist_key = str(event.value)
+    def select_wordlist(self, event: events.GenericEventArguments):
+        wordlist_key = str(event.args["label"])
         if wordlist_key not in self.wordlists:
             ui.notify(f"Wordlist '{wordlist_key}' not found.", color="red")
             return
