@@ -25,4 +25,4 @@ if __name__ in {"__main__", "__mp_main__"}:
         )
     )
     manager = GameManager(GameState.create_from_wordlist(wordlist))
-    ui.run(title="Lexigon", port=args.port, reload=True)
+    ui.run(title="Lexigon", port=args.port, reload=True, show=False)
